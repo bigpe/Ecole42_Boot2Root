@@ -114,7 +114,7 @@ cd - > /dev/null
 Declare ssh_executor
 ```shell
 ssh_executor () {
-  sshpass -p "$ssh_password" ssh $ssh_login@$IP "$1" 2> /dev/null
+  sshpass -p "$ssh_password" ssh -o StrictHostKeyChecking=no $ssh_login@$IP "$1" 2> /dev/null
 }
 ```
 ```shell
@@ -246,6 +246,7 @@ zaz_password=`python3 scripts/writeup2/turtle_draw.py`
 echo $zaz_password
 zaz_password=`echo -n "$zaz_password" | md5sum | awk '{print $1}'`
 echo $zaz_password
+echo "$zaz_password" > scripts/writeup2/zaz_password
 ssh_password=$zaz_password
 ```
 
