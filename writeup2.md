@@ -54,7 +54,7 @@ echo $ftp_password
 nmap $IP | grep "open"
 ```
 
-## Inspect ftp
+## Inspect FTP
 Declare ftp executor
 ```shell
 ftp_executor() {

