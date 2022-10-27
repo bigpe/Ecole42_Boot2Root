@@ -294,6 +294,4 @@ screen -ls | grep '(Detached)' | awk '{print $1}' | xargs -I % -t screen -X -S %
 sleep 30
 ```
 
-And just follow the dirty tips
-
-We are root, congrats!
+We are root, congrats! (lrorscha:test)
