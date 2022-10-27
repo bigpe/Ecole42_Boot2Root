@@ -4,3 +4,5 @@ fun
 main.c
 ft_fun/
 turtle
+db_login
+db_password
