@@ -6,7 +6,7 @@ echo $HOST_IP
 
 ## Find our VM IP
 ```shell
-IP=`arp -a | grep shared | awk '{print $2}' | cut -d "(" -f 2 | cut -d ")" -f 1`
+IP=`prlctl list -f | grep "Boot2Root" | awk '{print $3}'`
 echo $IP
 ```
 
