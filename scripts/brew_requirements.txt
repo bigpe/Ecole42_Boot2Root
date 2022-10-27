@@ -1,0 +1,6 @@
+sshpass
+lftp
+inetutils
+nmap
+sidaf/pentest/dirb
+
