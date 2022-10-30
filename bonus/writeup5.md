@@ -3,6 +3,9 @@
 ### Find our VM IP
 ```shell
 IP=`prlctl list -f | grep "Boot2Root" | awk '{print $3}'`
+if [ -z "$IP" ]; then 
+  IP=0.0.0.0
+fi
 echo $IP
 ```
 
